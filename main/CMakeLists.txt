@@ -1,3 +1,12 @@
-add_executable(main main.cpp ${sources} ${headers})
+set(PSD ${PROJECT_SOURCE_DIR})
 
-target_compile_features(main PUBLIC cxx_std_20)
+file(GLOB_RECURSE sources "${PSD}/src/*.c*")
+file(GLOB_RECURSE headers "${PSD}/headers/*.h*")
+
+include_directories("${PSD}/headers" "${PSD}/src")
+
+add_executable(DES "${PSD}/main/main.cpp" ${sources} ${headers})
+
+target_compile_features(DES PUBLIC cxx_std_20)
+
+source_group(TREE ${PSD} FILES "${PSD}/main/main.cpp" ${sources} ${headers})
