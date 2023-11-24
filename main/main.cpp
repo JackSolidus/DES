@@ -9,6 +9,7 @@ int main()
 {
 	setlocale(LC_ALL, "UTF-8");
 
+
 	string input_text = "";
 	string output_text = "";
 

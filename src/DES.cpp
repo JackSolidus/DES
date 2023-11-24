@@ -40,7 +40,8 @@ void TransformStringToBlocks(std::string& data_to_encrypt)
 		if (i > 0) {
 			bufferedBlocks[block_to_write] <<= 8;
 		}
-		bufferedBlocks[block_to_write] += data_to_encrypt[i];
+		UINT8 buff = data_to_encrypt[i];
+		bufferedBlocks[block_to_write] += buff;
 	}
 }
 
