@@ -1,48 +1,52 @@
 #include <DES.hpp>
 
 
-UINT64 CreateInitialVector()
+INT64 CreateInitialVector()
 {
-	return UINT64();
+	INT64 vector = 0;
+
+	srand(time(NULL));
+
+	vector = rand();
+	vector <<= 32;
+	vector += rand();
+
+	return vector;
 }
 
-void CompleteBlockTo64b(std::string &block)
+void CompleteStringTo64b(std::string &block)
 {
 	while (true)
 	{	
 		if ((block.size() * 8) % block_size == false)
 			break;
-		block += (INT8)0;
+		block += (char)0;
 	}
 }
 
-// переделать, так как нету заполнения buffer blocks
-void FillBlocks(UINT64 &vector)
+// РїРµСЂРµРґРµР»Р°С‚СЊ, С‚Р°Рє РєР°Рє РЅРµС‚Сѓ Р·Р°РїРѕР»РЅРµРЅРёСЏ buffer blocks
+void TransformStringToBlocks(std::string& data_to_encrypt)
 {
-	UINT32 blockTracker = 0; // отслеживает в какой блок необходимо писать биты
-	INT8 rankTracker = 7;	// отслеживает в какую часть блока необходимо записать 8 бит текста
-
 	bufferedBlocks.clear();
 	bufferedBlocks.push_back(0);
+	
+	INT64 block_to_write = 0;
 
-	/*for (int i = 0; i < sizeof(vector); i++) {
-		if (rankTracker < 0 && i != vector.size()) {
+	for (int i = 0; i < data_to_encrypt.size(); i++) {
+		if ((i > 0) && ((i % 8) == 0)) {
 			bufferedBlocks.push_back(0);
-			blockTracker++;
-			rankTracker = 7;
-			continue;
+			block_to_write++;
 		}
-
-		UINT64 temporary = block[i];
-		bufferedBlocks[blockTracker] += temporary << rankTracker * 8;
-
-		rankTracker--;
-	}*/
+		if (i > 0) {
+			bufferedBlocks[block_to_write] <<= 8;
+		}
+		bufferedBlocks[block_to_write] += data_to_encrypt[i];
+	}
 }
 
 void GenerateSetOfKeys()
 {
-	// Подготовка массивов к заполнению
+	// РџРѕРґРіРѕС‚РѕРІРєР° РјР°СЃСЃРёРІРѕРІ Рє Р·Р°РїРѕР»РЅРµРЅРёСЋ
 	memset(prepared_keys, 0, sizeof(prepared_keys));
 
 	AllocationOfSegnificantBits();
@@ -53,9 +57,11 @@ void GenerateSetOfKeys()
 
 void AllocationOfSegnificantBits()
 {
+	dedicated_bits_key = 0;
+
 	for (int i = 0; i < sizeof(key); i++) {
 		int kkey = std::popcount((UINT8)key[i]);
-		UINT64 buff = 0;
+		INT64 buff = 0;
 		if (std::popcount((UINT8)key[i]) % 2 == 0) {
 			buff = key[i] | 0b10000000;
 		}
@@ -67,44 +73,59 @@ void AllocationOfSegnificantBits()
 	
 }
 
-UINT64 PerformInitialPermuatation(UINT64& current_block)
+INT64 PerformInitialPermuatation(INT64& current_block)
 {
-	UINT64 encryptedContainter = 0;
+	INT64 encryptedContainter = 0;
 
 	for (int i = 0; i < 63; i++) {
-		encryptedContainter |= (UINT64)((current_block >> (64 - initial_permutation[i])) & 0x01) << (63 - i);
+		encryptedContainter |= (INT64)((current_block >> (64 - initial_permutation[i])) & 0x01) << (63 - i);
 	}
 
 	return encryptedContainter;
 }
 
-UINT64 PerformFinalPermutation(UINT64& block)
+INT64 PerformFinalPermutation(INT64& block)
 {
-	UINT64 buff = 0;
+	INT64 buff = 0;
 	for (int i = 0; i < 64; i++) {
-		buff |= (UINT64)((block >> (64 - final_permutation[i])) & 0x01) << (63 - i);
+		buff |= (INT64)((block >> (64 - final_permutation[i])) & 0x01) << (63 - i);
 	}
 	return buff;
 }
 
-void Encrypt(std::string &entry_block, std::string &output_block)
+std::vector<INT64> Encrypt(std::string &string_to_encrypt)
 {
-	CompleteBlockTo64b(entry_block);
+	CompleteStringTo64b(string_to_encrypt);
+
+	TransformStringToBlocks(string_to_encrypt);
 
 	GenerateSetOfKeys();
 
-	bufferedBlocks.clear();
+	initial_vector = CreateInitialVector();
+
+	saved_vector = initial_vector;
 
 	encrypted_blocks.clear();
 
-	initial_vector = CreateInitialVector();
-
 	for (int i = 0; i < bufferedBlocks.size(); i++) {
-
-		FillBlocks(initial_vector);
 		initial_vector = PerformFeistelNet(initial_vector);
-		encrypted_blocks.push_back(entry_block[i] ^ initial_vector);
+		encrypted_blocks.push_back(bufferedBlocks[i] ^ initial_vector);
 	}
+
+	return encrypted_blocks;
+}
+
+std::vector<INT64> Decrypt(std::vector<INT64> block_to_decrypt)
+{
+	GenerateSetOfKeys();
+	initial_vector = saved_vector;
+
+	for (int i = 0; i < block_to_decrypt.size(); i++) {
+		initial_vector = PerformFeistelNet(initial_vector);
+		block_to_decrypt[i] ^= initial_vector;
+	}
+
+	return block_to_decrypt;
 }
 
 void PerformKeyModification()
@@ -126,7 +147,7 @@ void PerformKeyModification()
 	}
 }
 
-void ExpandKeyStage(UINT64& prepared_key, UINT8 n)
+void ExpandKeyStage(INT64& prepared_key, INT8 n)
 {
 	LeftShift28Bits(key_part_left, n);
 
@@ -138,14 +159,14 @@ void ExpandKeyStage(UINT64& prepared_key, UINT8 n)
 
 	unexpended_key += key_part_right;
 
-	for (int i = 0; i < (sizeof(key_expansion) / sizeof(UINT8)); i++) {
+	for (int i = 0; i < (sizeof(key_expansion) / sizeof(INT8)); i++) {
 		prepared_key |= ((unexpended_key >> (56 - key_expansion[i])) & 0x01) << (47 - i);
 	}
 }
 
-void LeftShift28Bits(UINT32& set_of_bits, UINT8& n)
+void LeftShift28Bits(INT32& set_of_bits, INT8& n)
 {
-	UINT32 buff = 0;
+	INT32 buff = 0;
 	for (int i = 0; i < n; i++) {
 		buff <<= 1;
 		if (((set_of_bits >> (27 - i)) & 0x01) == 1) {
@@ -157,55 +178,55 @@ void LeftShift28Bits(UINT32& set_of_bits, UINT8& n)
 	set_of_bits |= buff;
 }
 
-UINT64 PerformFeistelNet(UINT64& block_to_encrypt)
+INT64 PerformFeistelNet(INT64& block_to_encrypt)
 {
 	PerformInitialPermuatation(block_to_encrypt);
 
 	SeparateBlockTo32Part(block_to_encrypt, block_left_part, block_right_part);
 
-	for (UINT8 i = 0; i < 16; i++) {
+	for (INT8 i = 0; i < 16; i++) {
 		FFuncEncrypting(block_left_part, block_right_part, i);
 	}
 
-	UINT64 buff = Combine32To64Bit(block_left_part, block_right_part);
+	INT64 buff = Combine32To64Bit(block_left_part, block_right_part);
 
-	UINT64 final_block = PerformFinalPermutation(buff);
+	INT64 final_block = PerformFinalPermutation(buff);
 
 	return final_block;
 }
 
-void FFuncEncrypting(UINT32 &left_part, UINT32 &right_part, UINT8 &n)
+void FFuncEncrypting(INT32 &left_part, INT32 &right_part, INT8 &n)
 {
-	UINT64 expanded_block = Expand32Block(right_part);
+	INT64 expanded_block = Expand32Block(right_part);
 	expanded_block ^= prepared_keys[n];
-	UINT32 proceded_right_part = PerformSPermutation(expanded_block);
+	INT32 proceded_right_part = PerformSPermutation(expanded_block);
 	left_part ^= proceded_right_part;
 
-	UINT32 buff = right_part;
+	INT32 buff = right_part;
 	right_part = left_part;
 	left_part = buff;
 }
 
-void SeparateBlockTo32Part(UINT64& block, UINT32& left_part, UINT32& right_part)
+void SeparateBlockTo32Part(INT64& block, INT32& left_part, INT32& right_part)
 {
 	right_part = block & 0x0ffffffff;
 	left_part = block >> 32;
 }
 
-UINT64 Combine32To64Bit(UINT32& left, UINT32& right)
+INT64 Combine32To64Bit(INT32& left, INT32& right)
 {
-	UINT64 buff = left;
+	INT64 buff = left;
 	buff <<= 32;
 	buff += right;
 	return buff;
 }
 
-UINT64 Expand32Block(UINT32 &block)
+INT64 Expand32Block(INT32 &block)
 {
-	UINT64 buff = block;
-	UINT64 expended_key = 0;
+	INT64 buff = block;
+	INT64 expended_key = 0;
 
-	// Расширение блока
+	// Р Р°СЃС€РёСЂРµРЅРёРµ Р±Р»РѕРєР°
 	for (int i = 0; i < 48; i++) {
 		expended_key |= ((buff >> (32 - block_expansion[i])) & 0x01) << (47 - i);
 	}
@@ -213,14 +234,14 @@ UINT64 Expand32Block(UINT32 &block)
 	return expended_key;
 }
 
-UINT32 PerformSPermutation(UINT64 &xored_block)
+INT32 PerformSPermutation(INT64 &xored_block)
 {
-	UINT8 block_6bit[8];
+	INT8 block_6bit[8];
 	memset(block_6bit, 0, sizeof(block_6bit));
 
 	Write48BitTo6bit(xored_block, block_6bit);
 	
-	UINT32 sorted_right = 0;
+	INT32 sorted_right = 0;
 	for (int i = 0; i < 8; i++) {
 		sorted_right <<= 4;
 		sorted_right += SBox[i][(block_6bit[i] & 0x03)][((block_6bit[i] >> 2) & 0x0f)];
@@ -229,9 +250,33 @@ UINT32 PerformSPermutation(UINT64 &xored_block)
 	return sorted_right;
 }
 
-void Write48BitTo6bit(UINT64 &xored_block, UINT8 *blocks_6bit)
+void Write48BitTo6bit(INT64 &xored_block, INT8 *blocks_6bit)
 {
 	for (int i = 0; i < 8; i++) {
 		blocks_6bit[i] = ((xored_block >> (42 - 6 * i)) & 0x03f);
 	}
+}
+
+void PrintData(std::string str)
+{
+	std::cout << "[ ";
+	for (int i = 0; i < str.size(); i++) {
+		if (i == (str.size() - 1)) {
+			std::cout << (INT16)str[i] << " ]" << std::endl;
+		}
+		else {
+			std::cout << (INT16)str[i] << ", ";
+		}
+	}
+}
+
+std::string ConvertBlocksToStr(std::vector<INT64> blocks)
+{
+	std::string buff = "";
+	for (int i = 0; i < blocks.size(); i++) {
+		for (int pos = 0; pos < 8; pos++) {
+			buff += (char)((blocks[i] >> (56 - (8 * pos))) & 0x0ff);
+		}
+	}
+	return buff;
 }

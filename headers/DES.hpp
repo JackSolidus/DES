@@ -1,13 +1,15 @@
 #ifndef DES_H
 #define DES_H
 
+#include <time.h>
+#include <cstdlib>
 #include <string>
 #include <vector>
 #include <iostream>
 #include <bitset>
 #include <bit>
 
-#include <Types.h>
+#include <Windows.h>
 
 
 #define BUFF_SIZE 1024
@@ -37,11 +39,11 @@ static INT8 block_expansion[] = { 32, 1, 2, 3, 4, 5,
                                   24, 25, 26, 27, 28, 29,
                                   28, 29, 30, 31, 32, 1 };
 
-static UINT8 key_expansion[] = { 14, 17, 11, 24, 1, 5, 3, 28, 15, 6, 21, 10, 23, 19, 12, 4,
+static INT8 key_expansion[] = { 14, 17, 11, 24, 1, 5, 3, 28, 15, 6, 21, 10, 23, 19, 12, 4,
                                  26, 8, 16, 7, 27, 20, 13, 2, 41, 52, 31, 37, 47, 55, 30, 40,
                                  51, 45, 33, 48, 44, 49, 39, 56, 34, 53, 46, 42, 50, 36, 29, 32 };
 
-static const UINT8 SBox[8][4][16] = {
+static const INT8 SBox[8][4][16] = {
     { // 0
         {14, 4 , 13, 1 , 2 , 15, 11, 8 , 3 , 10, 6 , 12, 5 , 9 , 0 , 7 },
         {0 , 15, 7 , 4 , 14, 2 , 13, 1 , 10, 6 , 12, 11, 9 , 5 , 3 , 8 },
@@ -93,57 +95,63 @@ static const UINT8 SBox[8][4][16] = {
 };
 
 
-static UINT8 key[8] = { 'A', 'n', 'a', 'k', 'o', 'n', 'd', 'a' };
+static INT8 key[8] = { 'A', 'n', 'a', 'k', 'o', 'n', 'd', 'a' };
 
-static UINT16 block_size = 64;
+static INT16 block_size = 64;
 
 static std::vector<INT8> encrypted, decrypted;
 
-static UINT64 dedicated_bits_key = 0, initial_vector = 0;
+static INT64 dedicated_bits_key = 0, initial_vector = 0, saved_vector;
 
-static UINT32 key_part_right = 0, key_part_left = 0;
+static INT32 key_part_right = 0, key_part_left = 0;
 
-static UINT32 block_left_part = 0, block_right_part;
+static INT32 block_left_part = 0, block_right_part;
 
-static UINT64 prepared_keys[16];
+static INT64 prepared_keys[16];
 
-static std::vector<UINT64> bufferedBlocks, encrypted_blocks;
+static std::vector<INT64> bufferedBlocks, encrypted_blocks;
 
 
-UINT64 CreateInitialVector();
+INT64 CreateInitialVector();
 
-void CompleteBlockTo64b(std::string &block);
+void CompleteStringTo64b(std::string &block);
 
 void AllocationOfSegnificantBits();
 
-void FillBlocks(UINT64 &vector);
+void TransformStringToBlocks(std::string& data_to_encrypt);
 
 void GenerateSetOfKeys();
 
-UINT64 PerformInitialPermuatation(UINT64& current_block);
+INT64 PerformInitialPermuatation(INT64& current_block);
 
-UINT64 PerformFinalPermutation(UINT64 &block);
+INT64 PerformFinalPermutation(INT64 &block);
 
-void Encrypt(std::string& entryBlock, std::string &output_block);
+std::vector<INT64> Encrypt(std::string& string_to_encrypt);
+
+std::vector<INT64> Decrypt(std::vector<INT64> block_to_decrypt);
 
 void PerformKeyModification();
 
-void ExpandKeyStage(UINT64 &prepared_key, UINT8 n);
+void ExpandKeyStage(INT64 &prepared_key, INT8 n);
 
-void LeftShift28Bits(UINT32& set_of_bits, UINT8& n);
+void LeftShift28Bits(INT32& set_of_bits, INT8& n);
 
-UINT64 PerformFeistelNet(UINT64 &block_to_encrypt);
+INT64 PerformFeistelNet(INT64 &block_to_encrypt);
 
-void FFuncEncrypting(UINT32 &left_part, UINT32 &right_part, UINT8 &n);
+void FFuncEncrypting(INT32 &left_part, INT32 &right_part, INT8 &n);
 
-void SeparateBlockTo32Part(UINT64 &block, UINT32 &left_part, UINT32 &right_part);
+void SeparateBlockTo32Part(INT64 &block, INT32 &left_part, INT32 &right_part);
 
-UINT64 Combine32To64Bit(UINT32 &left, UINT32 &right);
+INT64 Combine32To64Bit(INT32 &left, INT32 &right);
 
-UINT64 Expand32Block(UINT32 &right_block);
+INT64 Expand32Block(INT32 &right_block);
 
-UINT32 PerformSPermutation(UINT64 &xored_block);
+INT32 PerformSPermutation(INT64 &xored_block);
 
-void Write48BitTo6bit(UINT64 &xored_block, UINT8 *blocks_6bit);
+void Write48BitTo6bit(INT64 &xored_block, INT8 *blocks_6bit);
+
+void PrintData(std::string str);
+
+std::string ConvertBlocksToStr(std::vector<INT64> blocks);
 
 #endif // !DES_H
