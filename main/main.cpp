@@ -15,21 +15,31 @@ int main()
 
 	getline(cin, input_text);
 
+	cout << endl;
+
 	vector <INT64> encrypted_data;
 
 	PrintData(input_text);
 
+	cout << endl;
+
 	encrypted_data = Encrypt(input_text);
 
+	cout << ConvertBlocksToStr(encrypted_data) << endl;
+
 	PrintData(ConvertBlocksToStr(encrypted_data));
+
+	cout << endl;
 
 	encrypted_data = Decrypt(encrypted_data);
 
 	output_text = ConvertBlocksToStr(encrypted_data);
 
-	PrintData(output_text);
-
 	cout << output_text << endl;
+
+	cout << endl;
+
+	PrintData(output_text);
 
 	return 0;
 }

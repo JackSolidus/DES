@@ -263,10 +263,10 @@ void PrintData(std::string str)
 	std::cout << "[ ";
 	for (int i = 0; i < str.size(); i++) {
 		if (i == (str.size() - 1)) {
-			std::cout << (INT16)str[i] << " ]" << std::endl;
+			std::cout << (UINT16)str[i] << " ]" << std::endl;
 		}
 		else {
-			std::cout << (INT16)str[i] << ", ";
+			std::cout << (UINT16)str[i] << ", ";
 		}
 	}
 }
